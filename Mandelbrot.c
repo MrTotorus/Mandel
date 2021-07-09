@@ -25,8 +25,8 @@
 #define THREADS 100
 
 
-double toMath(double bX, double bY, double *mX, double *mY);
-double toBMP(double *bX, double *bY, double mX, double mY);
+double toMath(long *bX, long *bY, double *mX, double *mY);
+double toBMP(double *bX, double *bY, double *mX, double *mY);
 long toPos(long x, long y);
 double cut(double x, double low, double up);
 double map(double x, double in_min, double in_max, double out_min, double out_max);
@@ -125,7 +125,7 @@ void calc(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 
 	for (long xw = W / threads * thread_nr; xw < W / threads * (thread_nr  + 1); xw++) {
 		for (long yh = 0; yh < H; yh++) {
 			
-			toMath(xw, yh, &mX, &mY);
+			toMath(&xw, &yh, &mX, &mY);
 			
 			c = mX + I * mY;
 			
@@ -152,17 +152,17 @@ long reku(double complex c, double complex z, long tiefe) {
 	return(reku(c, z, tiefe));
 }
 
-double toMath(double bX, double bY, double *mX, double *mY) {
-	*mX = X_MIN + ((bX * (X_MAX - X_MIN)) / (W));
-	*mY = Y_MIN + ((bY * (Y_MAX - Y_MIN)) / (H));
+double toMath(long *bX, long *bY, double *mX, double *mY) {
+	*mX = X_MIN + ((*bX * (X_MAX - X_MIN)) / (W));
+	*mY = Y_MIN + ((*bY * (Y_MAX - Y_MIN)) / (H));
 	
 	return(0);
 }
 
-double toBMP(double *bX, double *bY, double mX, double mY) {
-	mY = map(mY, Y_MIN, Y_MAX, Y_MAX, Y_MIN); 
-	*bX = ((mX - X_MIN) * (W - 1)) / (X_MAX - X_MIN);
-	*bY = ((mY - Y_MIN) * (H - 1)) / (Y_MAX - Y_MIN);
+double toBMP(double *bX, double *bY, double *mX, double *mY) {
+	*mY = map(*mY, Y_MIN, Y_MAX, Y_MAX, Y_MIN); 
+	*bX = ((*mX - X_MIN) * (W - 1)) / (X_MAX - X_MIN);
+	*bY = ((*mY - Y_MIN) * (H - 1)) / (Y_MAX - Y_MIN);
 	
 	return(0);
 }
@@ -176,35 +176,39 @@ double map(double x, double in_min, double in_max, double out_min, double out_ma
 }
 
 void draw_colour(uint32_t *data, int tiefe, double *bX, double *bY, double *mX, double *mY) {
-	toBMP(bX, bY, *mX, *mY);
+	toBMP(bX, bY, mX, mY);
+	int colour = 0;
+	
 	if(tiefe == 10000) {
-		*(data + toPos(round(*bX), round(*bY))) = COLOR_BLACK;
+		colour = COLOR_BLACK;
 	}
 	else if(tiefe >= 1000) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x00FF130D;
+		colour = 0x00FF130D;
 	}
 	else if(tiefe >= 300) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x00E605C1;
+		colour = 0x00E605C1;
 	}
 	else if(tiefe >= 100) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x009100FA;
+		colour = 0x009100FA;
 	}
 	else if(tiefe >= 75) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x001200E6;
+		colour = 0x001200E6;
 	}
 	else if(tiefe >= 50) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x000D70FF;
+		colour = 0x000D70FF;
 	}
 	else if(tiefe >= 25) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x0005CFE6;
+		colour = 0x0005CFE6;
 	}
 	else if(tiefe >= 15) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x0000FA92;
+		colour = 0x0000FA92;
 	}
 	else if(tiefe >= 9) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x0000E60E;
+		colour = 0x0000E60E;
 	}
 	else if(tiefe >= 4) {
-		*(data + toPos(round(*bX), round(*bY))) = 0x0096FF0D;
+		colour = 0x0096FF0D;
 	}
+	
+	*(data + toPos((long)round(*bX), (long)round(*bY))) = colour;
 }
