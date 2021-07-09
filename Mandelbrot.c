@@ -4,7 +4,7 @@
 #include "libBMP.h"
 #include <math.h>
 #include <complex.h>
-
+#include <time.h>
 #include <unistd.h>
 
 /*#define W 2600.0
@@ -33,13 +33,17 @@ double map(double x, double in_min, double in_max, double out_min, double out_ma
 
 long reku(double complex c, double complex z, long tiefe);
 void calc(uint32_t *data, long thread_nr, long threads);
+void draw_colour(uint32_t *data, int tiefe, double *bX, double *bY, double *mX, double *mY);
 
 DWORD WINAPI ThreadFunc(uint32_t* data);
 
 int thread_table[THREADS] = {0};
+clock_t start, end;
+double cpu_time_used;
 
 int main(void) {
 	
+	start = clock();
 	Beep(440,100);
 	//nice cc -c *.c;
 	
@@ -80,6 +84,11 @@ int main(void) {
 	printf("\nPainting graph\n");	
 	bmp_create("bild_MT.bmp", data, W, H);
 	printf("\nSuccess!\n");
+	
+	end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("Needed %f Seconds / %f Minutes / %f Hours\n\n", cpu_time_used, cpu_time_used / 60, cpu_time_used / 3600);
+	
 	Beep(440,100);
 	
 	free(data);
@@ -122,47 +131,7 @@ void calc(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 
 			
 			tiefe = reku(c, 0, 0);
 			
-			if(tiefe == 10000) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = COLOR_BLACK;
-			}
-			else if(tiefe >= 1000) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x00FF130D;
-			}
-			else if(tiefe >= 300) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x00E605C1;
-			}
-			else if(tiefe >= 100) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x009100FA;
-			}
-			else if(tiefe >= 75) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x001200E6;
-			}
-			else if(tiefe >= 50) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x000D70FF;
-			}
-			else if(tiefe >= 25) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x0005CFE6;
-			}
-			else if(tiefe >= 15) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x0000FA92;
-			}
-			else if(tiefe >= 9) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x0000E60E;
-			}
-			else if(tiefe >= 4) {
-				toBMP(&bX, &bY, mX, mY);
-				*(data + toPos(round(bX), round(bY))) = 0x0096FF0D;
-			}
-			
+			draw_colour(data, tiefe, &bX, &bY, &mX, &mY);
 			
 		}
 	}
@@ -204,4 +173,38 @@ long toPos(long x, long y) {
 
 double map(double x, double in_min, double in_max, double out_min, double out_max) {		//credit to Arduino
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void draw_colour(uint32_t *data, int tiefe, double *bX, double *bY, double *mX, double *mY) {
+	toBMP(bX, bY, *mX, *mY);
+	if(tiefe == 10000) {
+		*(data + toPos(round(*bX), round(*bY))) = COLOR_BLACK;
+	}
+	else if(tiefe >= 1000) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x00FF130D;
+	}
+	else if(tiefe >= 300) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x00E605C1;
+	}
+	else if(tiefe >= 100) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x009100FA;
+	}
+	else if(tiefe >= 75) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x001200E6;
+	}
+	else if(tiefe >= 50) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x000D70FF;
+	}
+	else if(tiefe >= 25) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x0005CFE6;
+	}
+	else if(tiefe >= 15) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x0000FA92;
+	}
+	else if(tiefe >= 9) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x0000E60E;
+	}
+	else if(tiefe >= 4) {
+		*(data + toPos(round(*bX), round(*bY))) = 0x0096FF0D;
+	}
 }
