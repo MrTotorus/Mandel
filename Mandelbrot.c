@@ -7,22 +7,22 @@
 #include <time.h>
 #include <unistd.h>
 
-/*#define W 2600.0
-#define H 1500.0
+#define W 26000.0
+#define H 15000.0
 #define X_MAX -0.546
 #define X_MIN -0.572
 #define Y_MAX -0.55
-#define Y_MIN -0.565*/
-
+#define Y_MIN -0.565
+/*
 #define W 4000.0
 #define H 3000.0
 #define X_MAX 1.25
 #define X_MIN -2.25
 #define Y_MAX 1.25
-#define Y_MIN -1.25
+#define Y_MIN -1.25*/
 
-#define N_MAX 10000
-#define THREADS 100
+#define N_MAX 1000
+#define THREADS 160
 
 
 double toMath(long *bX, long *bY, double *mX, double *mY);
@@ -177,38 +177,6 @@ double map(double x, double in_min, double in_max, double out_min, double out_ma
 
 void draw_colour(uint32_t *data, int tiefe, double *bX, double *bY, double *mX, double *mY) {
 	toBMP(bX, bY, mX, mY);
-	int colour = 0;
 	
-	if(tiefe == 10000) {
-		colour = COLOR_BLACK;
-	}
-	else if(tiefe >= 1000) {
-		colour = 0x00FF130D;
-	}
-	else if(tiefe >= 300) {
-		colour = 0x00E605C1;
-	}
-	else if(tiefe >= 100) {
-		colour = 0x009100FA;
-	}
-	else if(tiefe >= 75) {
-		colour = 0x001200E6;
-	}
-	else if(tiefe >= 50) {
-		colour = 0x000D70FF;
-	}
-	else if(tiefe >= 25) {
-		colour = 0x0005CFE6;
-	}
-	else if(tiefe >= 15) {
-		colour = 0x0000FA92;
-	}
-	else if(tiefe >= 9) {
-		colour = 0x0000E60E;
-	}
-	else if(tiefe >= 4) {
-		colour = 0x0096FF0D;
-	}
-	
-	*(data + toPos((long)round(*bX), (long)round(*bY))) = colour;
+	*(data + toPos((long)round(*bX), (long)round(*bY))) = (long) map(tiefe, 0, N_MAX, 0, 16777215);
 }
