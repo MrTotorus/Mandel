@@ -14,8 +14,8 @@
 #define Y_MAX -0.55
 #define Y_MIN -0.565*/
 
-#define W 400.0
-#define H 301.0
+#define W 800.0
+#define H 601.0
 #define X_MAX_M 1.25
 #define X_MIN_M -2.25
 #define Y_MAX_M 1.25
@@ -23,7 +23,6 @@
 
 #define N_MAX 10000
 #define THREADS 160
-
 
 double toMath(long *bX, long *bY, double *mX, double *mY);
 double toBMP(double *bX, double *bY, double *mX, double *mY);
@@ -36,7 +35,7 @@ void calc(uint32_t *data, long thread_nr, long threads);
 void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
 
 void calc_position(long x_middle, long y_middle, long zoom);
-void HSVtoRGB(uint8_t *r, uint8_t *g, uint8_t *b, uint16_t h, uint16_t s, uint16_t v);
+void HSVtoRGB(uint32_t *r, uint32_t *g, uint32_t *b, uint32_t h, uint32_t s, uint32_t v);
 
 DWORD WINAPI ThreadFunc(uint32_t* data);
 
@@ -179,8 +178,10 @@ double map(double x, double in_min, double in_max, double out_min, double out_ma
 void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
 	toBMP(bX, bY, mX, mY);
 	
-	uint8_t r, g, b;	
-	HSVtoRGB(&r, &g, &b, 0, 0, map(log(tiefe), 0, log(N_MAX), 100, 0));
+	uint32_t r, g, b, in;
+	in = map(log(tiefe), 0, log(N_MAX), 0, 359);
+	
+	HSVtoRGB(&r, &g, &b, in1, 100, 100);
 	
 	*(data + toPos((long)round(*bX), (long)round(*bY))) = b + 16*16*g + 16*16*16*16*r;
 }
@@ -194,8 +195,8 @@ void calc_position(long x_middle, long y_middle, long zoom) {
 	
 }
 
-void HSVtoRGB(uint8_t *r, uint8_t *g, uint8_t *b, uint16_t h, uint16_t s, uint16_t v) {		// credit to ProgrammerSought
-	// R,G,B from 0-255, H from 0-360, S,V from 0-100
+void HSVtoRGB(uint32_t *r, uint32_t *g, uint32_t *b, uint32_t h, uint32_t s, uint32_t v) {		// credit to ProgrammerSought
+	// R,G,B from 0-255, H from 0-359, S,V from 0-100
 	int i;
 	float RGB_min, RGB_max;
 	RGB_max = v*2.55f;
