@@ -54,18 +54,12 @@ long main(void) {
 	
 	start = clock();
 	Beep(540,200);
-	//nice cc -c *.c;
 	
 	uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
 	
 	
-	calc_position(0, 0, 100);									// (-100 to 100, -100 to 100, n) 
+	calc_position(0, 0, 100);									// (-100 to 100, -100 to 100, zoom) 
 	//printf("%d %d %d %d", X_MAX, X_MIN, Y_MAX, Y_MIN);
-	
-	printf("\nPainting background\n");
-	for (long i = 0; i < W * H; i++) {
-		*(data + i) = COLOR_WHITE;
-	}
 	
 	printf("\nCalculating graph\n");
 	
