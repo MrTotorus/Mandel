@@ -14,14 +14,14 @@
 #define Y_MAX -0.55
 #define Y_MIN -0.565*/
 
-#define W 4000.0
-#define H 3000.0
+#define W 400.0
+#define H 301.0
 #define X_MAX_M 1.25
 #define X_MIN_M -2.25
 #define Y_MAX_M 1.25
 #define Y_MIN_M -1.25
 
-#define N_MAX 100
+#define N_MAX 10000
 #define THREADS 160
 
 
@@ -36,6 +36,7 @@ void calc(uint32_t *data, long thread_nr, long threads);
 void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
 
 void calc_position(long x_middle, long y_middle, long zoom);
+void HSVtoRGB(uint8_t *r, uint8_t *g, uint8_t *b, uint16_t h, uint16_t s, uint16_t v);
 
 DWORD WINAPI ThreadFunc(uint32_t* data);
 
@@ -65,7 +66,6 @@ long main(void) {
 	
 	DWORD   dwThreadIdArray[THREADS];
 	for (long i = 0; i < THREADS; i++) {
-		
 		HANDLE thread = CreateThread(NULL, 0, ThreadFunc, data, 0, NULL);
 	}
 	
@@ -178,7 +178,11 @@ double map(double x, double in_min, double in_max, double out_min, double out_ma
 
 void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
 	toBMP(bX, bY, mX, mY);
-	*(data + toPos((long)round(*bX), (long)round(*bY))) = (long) map(tiefe, 0, N_MAX, 0, 16777215);
+	
+	uint8_t r, g, b;	
+	HSVtoRGB(&r, &g, &b, 0, 0, map(log(tiefe), 0, log(N_MAX), 100, 0));
+	
+	*(data + toPos((long)round(*bX), (long)round(*bY))) = b + 16*16*g + 16*16*16*16*r;
 }
 
 void calc_position(long x_middle, long y_middle, long zoom) {
@@ -188,4 +192,51 @@ void calc_position(long x_middle, long y_middle, long zoom) {
 	Y_MIN = map(y_middle + 10000/zoom, -100, 100, Y_MIN_M, Y_MAX_M);
 	Y_MAX = map(y_middle - 10000/zoom, -100, 100, Y_MIN_M, Y_MAX_M);
 	
+}
+
+void HSVtoRGB(uint8_t *r, uint8_t *g, uint8_t *b, uint16_t h, uint16_t s, uint16_t v) {		// credit to ProgrammerSought
+	// R,G,B from 0-255, H from 0-360, S,V from 0-100
+	int i;
+	float RGB_min, RGB_max;
+	RGB_max = v*2.55f;
+	RGB_min = RGB_max*(100 - s) / 100.0f;
+
+	i = h / 60;
+	int difs = h % 60; // factorial part of h
+
+					   // RGB adjustment amount by hue 
+	float RGB_Adj = (RGB_max - RGB_min)*difs / 60.0f;
+
+	switch (i) {
+	case 0:
+		*r = RGB_max;
+		*g = RGB_min + RGB_Adj;
+		*b = RGB_min;
+		break;
+	case 1:
+		*r = RGB_max - RGB_Adj;
+		*g = RGB_max;
+		*b = RGB_min;
+		break;
+	case 2:
+		*r = RGB_min;
+		*g = RGB_max;
+		*b = RGB_min + RGB_Adj;
+		break;
+	case 3:
+		*r = RGB_min;
+		*g = RGB_max - RGB_Adj;
+		*b = RGB_max;
+		break;
+	case 4:
+		*r = RGB_min + RGB_Adj;
+		*g = RGB_min;
+		*b = RGB_max;
+		break;
+	default:		// case 5:
+		*r = RGB_max;
+		*g = RGB_min;
+		*b = RGB_max - RGB_Adj;
+		break;
+	}
 }
