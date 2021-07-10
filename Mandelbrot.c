@@ -21,7 +21,7 @@
 #define Y_MAX_M 1.25
 #define Y_MIN_M -1.25
 
-#define N_MAX 1000
+#define N_MAX 100
 #define THREADS 160
 
 
@@ -46,14 +46,20 @@ double cpu_time_used;
 
 long main(void) {
 	
+	if (H * W * 4 + 54 > 4000000000) {
+		printf("\nImage size too big!\n\n");
+		Beep(880,200);
+		exit(-1);
+	}
+	
 	start = clock();
-	Beep(440,100);
+	Beep(540,200);
 	//nice cc -c *.c;
 	
 	uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
 	
 	
-	calc_position(-55, 0, 1000);									// (-100 to 100, -100 to 100, n) 
+	calc_position(0, 0, 100);									// (-100 to 100, -100 to 100, n) 
 	//printf("%d %d %d %d", X_MAX, X_MIN, Y_MAX, Y_MIN);
 	
 	printf("\nPainting background\n");
@@ -93,7 +99,7 @@ long main(void) {
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("Needed %f Seconds / %f Minutes / %f Hours\n\n", cpu_time_used, cpu_time_used / 60, cpu_time_used / 3600);
 	
-	Beep(440,100);
+	Beep(540,200);
 	
 	free(data);
 	
@@ -124,7 +130,7 @@ void calc(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 
 	complex double c;
 	
 	for (long xw = W / threads * thread_nr; xw < W / threads * (thread_nr  + 1); xw++) {	// Splitting the picture in |THREADS| columns
-		for (long yh = 0; yh < H; yh++) {
+		for (long yh = 0; yh <= H; yh++) {
 			
 			toMath(&xw, &yh, &mX, &mY);
 			
@@ -162,8 +168,8 @@ double toMath(long *bX, long *bY, double *mX, double *mY) {
 
 double toBMP(double *bX, double *bY, double *mX, double *mY) {
 	*mY = map(*mY, Y_MIN, Y_MAX, Y_MAX, Y_MIN); 
-	*bX = ((*mX - X_MIN) * (W - 1)) / (X_MAX - X_MIN);
-	*bY = ((*mY - Y_MIN) * (H - 1)) / (Y_MAX - Y_MIN);
+	*bX = ((*mX - X_MIN) * (W)) / (X_MAX - X_MIN);
+	*bY = ((*mY - Y_MIN) * (H-1)) / (Y_MAX - Y_MIN);
 	
 	return(0);
 }
