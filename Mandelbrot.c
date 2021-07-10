@@ -14,8 +14,8 @@
 #define Y_MAX -0.55
 #define Y_MIN -0.565*/
 
-#define W 800.0
-#define H 601.0
+#define W 20000.0
+#define H 15001.0
 #define X_MAX_M 1.25
 #define X_MIN_M -2.25
 #define Y_MAX_M 1.25
@@ -181,7 +181,7 @@ void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX,
 	uint32_t r, g, b, in;
 	in = map(log(tiefe), 0, log(N_MAX), 0, 359);
 	
-	HSVtoRGB(&r, &g, &b, in1, 100, 100);
+	HSVtoRGB(&r, &g, &b, in, 100, 100);
 	
 	*(data + toPos((long)round(*bX), (long)round(*bY))) = b + 16*16*g + 16*16*16*16*r;
 }
