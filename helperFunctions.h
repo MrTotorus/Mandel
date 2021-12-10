@@ -53,7 +53,7 @@ void HSV_to_RGB(uint32_t *r, uint32_t *g, uint32_t *b, uint32_t h, uint32_t s, u
 }
 
 double map_value(double x, double in_min, double in_max, double out_min, double out_max) {		// credit to Arduino
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;					// Map an input to a specific range
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;					// Map an input to a specific range
 }
 
 
