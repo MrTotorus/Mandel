@@ -61,7 +61,7 @@ long main(void) {
 	
 	
 	calculate_image_position(MIDDLE_X, MIDDLE_Y, ZOOM);									// (-100 to 100, -100 to 100, zoom) 
-	//printf("%d %d %d %d", X_MAX, X_MIN, Y_MAX, Y_MIN);
+	//printf("%d %d %d %d", x_max, x_min, y_max, y_min);
 	
 	printf("\nCalculating graph\n");
 	
