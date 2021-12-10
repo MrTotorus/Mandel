@@ -14,7 +14,7 @@
 
 #define MIDDLE_X -25
 #define MIDDLE_Y 24
-#define ZOOM 10000
+#define ZOOM 100000
 
 // #define X_MAX -0.546
 // #define X_MIN -0.572
@@ -61,7 +61,7 @@ long main(void) {
 	
 	
 	calculate_image_position(MIDDLE_X, MIDDLE_Y, ZOOM);									// (-100 to 100, -100 to 100, zoom) 
-	//printf("%d %d %d %d", x_max, x_min, y_max, y_min);
+	printf("%f %f %f %f", x_max, x_min, y_max, y_min);
 	
 	printf("\nCalculating graph\n");
 	
@@ -186,10 +186,10 @@ long to_pos(long x, long y) {
 
 void calculate_image_position(long x_middle, long y_middle, long zoom) {
 	
-	x_min = map_value(x_middle - 10000/zoom, -100, 100, X_MIN, X_MAX);
-	x_max = map_value(x_middle + 10000/zoom, -100, 100, X_MIN, X_MAX);
-	y_min = map_value(y_middle + 10000/zoom, -100, 100, Y_MIN, Y_MAX);
-	y_max = map_value(y_middle - 10000/zoom, -100, 100, Y_MIN, Y_MAX);
+	x_min = map_value(x_middle - 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
+	x_max = map_value(x_middle + 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
+	y_min = map_value(y_middle + 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
+	y_max = map_value(y_middle - 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
 	
 }
 
