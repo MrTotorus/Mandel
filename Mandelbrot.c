@@ -1,46 +1,48 @@
+#include "libBMP.h"
+#include "helperFunctions.h"
+
 #include <stdio.h>
 #include <windows.h>
 #include <utilapiset.h>
-#include "libBMP.h"
 #include <math.h>
 #include <complex.h>
 #include <time.h>
 #include <unistd.h>
 
-/*#define W 26000.0
-#define H 15000.0
-#define X_MAX -0.546
-#define X_MIN -0.572
-#define Y_MAX -0.55
-#define Y_MIN -0.565*/
+#define W 3500.0
+#define H 2500.0
 
-#define W 20000.0
-#define H 15001.0
-#define X_MAX_M 1.25
-#define X_MIN_M -2.25
-#define Y_MAX_M 1.25
-#define Y_MIN_M -1.25
+#define MIDDLE_X -25
+#define MIDDLE_Y 24
+#define ZOOM 10000
 
-#define N_MAX 10000
+// #define X_MAX -0.546
+// #define X_MIN -0.572
+// #define Y_MAX -0.55
+// #define Y_MIN -0.565
+
+#define X_MAX 1.25
+#define X_MIN -2.25
+#define Y_MAX 1.25
+#define Y_MIN -1.25
+
+#define N_MAX 1000
 #define THREADS 160
 
-double toMath(long *bX, long *bY, double *mX, double *mY);
-double toBMP(double *bX, double *bY, double *mX, double *mY);
-long toPos(long x, long y);
-double cut(double x, double low, double up);
-double map(double x, double in_min, double in_max, double out_min, double out_max);
+double image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY);
+double math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY);
+long to_pos(long x, long y);
 
-long reku(double complex c, double complex z, long tiefe);
-void calc(uint32_t *data, long thread_nr, long threads);
-void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
+long recursion(double complex c, double complex z, long tiefe);
+void calculate_set(uint32_t *data, long thread_nr, long threads);
+void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
+void calculate_image_position(long x_middle, long y_middle, long zoom);
+uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b);
 
-void calc_position(long x_middle, long y_middle, long zoom);
-void HSVtoRGB(uint32_t *r, uint32_t *g, uint32_t *b, uint32_t h, uint32_t s, uint32_t v);
-
-DWORD WINAPI ThreadFunc(uint32_t* data);
+DWORD WINAPI calculate_segment(uint32_t* data);
 
 long thread_table[THREADS] = {0};
-double X_MAX, X_MIN, Y_MAX, Y_MIN;
+double x_max, x_min, y_max, y_min;
 clock_t start, end;
 double cpu_time_used;
 
@@ -58,14 +60,14 @@ long main(void) {
 	uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
 	
 	
-	calc_position(0, 0, 100);									// (-100 to 100, -100 to 100, zoom) 
+	calculate_image_position(MIDDLE_X, MIDDLE_Y, ZOOM);									// (-100 to 100, -100 to 100, zoom) 
 	//printf("%d %d %d %d", X_MAX, X_MIN, Y_MAX, Y_MIN);
 	
 	printf("\nCalculating graph\n");
 	
 	DWORD   dwThreadIdArray[THREADS];
 	for (long i = 0; i < THREADS; i++) {
-		HANDLE thread = CreateThread(NULL, 0, ThreadFunc, data, 0, NULL);
+		HANDLE thread = CreateThread(NULL, 0, calculate_segment, data, 0, NULL);
 	}
 	
 	long not_finished = THREADS;
@@ -99,7 +101,7 @@ long main(void) {
 	return(0);
 }
 
-DWORD WINAPI ThreadFunc(uint32_t* data) {
+DWORD WINAPI calculate_segment(uint32_t* data) {
 	long thread_nr = 0;
 	for(long i = 0; i < THREADS; i++) {  	// Extremely intelligent method to assign the tread_nr
 		if(*(thread_table + i) == 0) {
@@ -108,12 +110,12 @@ DWORD WINAPI ThreadFunc(uint32_t* data) {
 			break;
 		}
 	}
-	calc(data, thread_nr, THREADS);
+	calculate_set(data, thread_nr, THREADS);
 	
 	*(thread_table + thread_nr) += 1; 		// marking as finished
 }
 
-void calc(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 1, threads n
+void calculate_set(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 1, threads n
 	double bX = 0.0;
 	double bY = 0.0;
 	double mX = 0.0;
@@ -125,19 +127,19 @@ void calc(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 
 	for (long xw = W / threads * thread_nr; xw < W / threads * (thread_nr  + 1); xw++) {	// Splitting the picture in |THREADS| columns
 		for (long yh = 0; yh <= H; yh++) {
 			
-			toMath(&xw, &yh, &mX, &mY);
+			image_coordinates_to_math_coordinates(&xw, &yh, &mX, &mY);
 			
 			c = mX + I * mY;
 			
-			tiefe = reku(c, 0, 0);
+			tiefe = recursion(c, 0, 0);
 			
-			draw_colour(data, tiefe, &bX, &bY, &mX, &mY);
+			draw_color(data, tiefe, &bX, &bY, &mX, &mY);
 			
 		}
 	}
 }
 
-long reku(double complex c, double complex z, long tiefe) {
+long recursion(double complex c, double complex z, long tiefe) {
 	
 	if (tiefe > N_MAX) {
 		return(tiefe - 1);
@@ -149,95 +151,48 @@ long reku(double complex c, double complex z, long tiefe) {
 	z = z * z + c;
 	tiefe++;
 	
-	return(reku(c, z, tiefe));
+	return(recursion(c, z, tiefe));
 }
 
-double toMath(long *bX, long *bY, double *mX, double *mY) {
-	*mX = X_MIN + ((*bX * (X_MAX - X_MIN)) / (W));
-	*mY = Y_MIN + ((*bY * (Y_MAX - Y_MIN)) / (H));
+void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
+	math_coordinates_to_image_cooridnates(bX, bY, mX, mY);
+	
+	uint32_t r, g, b, in;
+	in = map_value(log(tiefe), 0, log(N_MAX/2), 0, 359);
+	
+	HSV_to_RGB(&r, &g, &b, in, 100, 100);
+	
+	*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
+}
+
+double image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
+	*mX = x_min + ((*bX * (x_max - x_min)) / (W));
+	*mY = y_min + ((*bY * (y_max - y_min)) / (H));
 	
 	return(0);
 }
 
-double toBMP(double *bX, double *bY, double *mX, double *mY) {
-	*mY = map(*mY, Y_MIN, Y_MAX, Y_MAX, Y_MIN); 
-	*bX = ((*mX - X_MIN) * (W)) / (X_MAX - X_MIN);
-	*bY = ((*mY - Y_MIN) * (H-1)) / (Y_MAX - Y_MIN);
+double math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY) {
+	*mY = map_value(*mY, y_min, y_max, y_max, y_min); 
+	*bX = ((*mX - x_min) * (W)) / (x_max - x_min);
+	*bY = ((*mY - y_min) * (H-1)) / (y_max - y_min);
 	
 	return(0);
 }
 
-long toPos(long x, long y) {
+long to_pos(long x, long y) {
 	return((y * W) + x);
 }
 
-double map(double x, double in_min, double in_max, double out_min, double out_max) {		// credit to Arduino
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;					// Map an input to a specific range
-}
-
-void draw_colour(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
-	toBMP(bX, bY, mX, mY);
+void calculate_image_position(long x_middle, long y_middle, long zoom) {
 	
-	uint32_t r, g, b, in;
-	in = map(log(tiefe), 0, log(N_MAX), 0, 359);
-	
-	HSVtoRGB(&r, &g, &b, in, 100, 100);
-	
-	*(data + toPos((long)round(*bX), (long)round(*bY))) = b + 16*16*g + 16*16*16*16*r;
-}
-
-void calc_position(long x_middle, long y_middle, long zoom) {
-	
-	X_MIN = map(x_middle - 10000/zoom, -100, 100, X_MIN_M, X_MAX_M);
-	X_MAX = map(x_middle + 10000/zoom, -100, 100, X_MIN_M, X_MAX_M);
-	Y_MIN = map(y_middle + 10000/zoom, -100, 100, Y_MIN_M, Y_MAX_M);
-	Y_MAX = map(y_middle - 10000/zoom, -100, 100, Y_MIN_M, Y_MAX_M);
+	x_min = map_value(x_middle - 10000/zoom, -100, 100, X_MIN, X_MAX);
+	x_max = map_value(x_middle + 10000/zoom, -100, 100, X_MIN, X_MAX);
+	y_min = map_value(y_middle + 10000/zoom, -100, 100, Y_MIN, Y_MAX);
+	y_max = map_value(y_middle - 10000/zoom, -100, 100, Y_MIN, Y_MAX);
 	
 }
 
-void HSVtoRGB(uint32_t *r, uint32_t *g, uint32_t *b, uint32_t h, uint32_t s, uint32_t v) {		// credit to ProgrammerSought
-	// R,G,B from 0-255, H from 0-359, S,V from 0-100
-	int i;
-	float RGB_min, RGB_max;
-	RGB_max = v*2.55f;
-	RGB_min = RGB_max*(100 - s) / 100.0f;
-
-	i = h / 60;
-	int difs = h % 60; // factorial part of h
-
-					   // RGB adjustment amount by hue 
-	float RGB_Adj = (RGB_max - RGB_min)*difs / 60.0f;
-
-	switch (i) {
-	case 0:
-		*r = RGB_max;
-		*g = RGB_min + RGB_Adj;
-		*b = RGB_min;
-		break;
-	case 1:
-		*r = RGB_max - RGB_Adj;
-		*g = RGB_max;
-		*b = RGB_min;
-		break;
-	case 2:
-		*r = RGB_min;
-		*g = RGB_max;
-		*b = RGB_min + RGB_Adj;
-		break;
-	case 3:
-		*r = RGB_min;
-		*g = RGB_max - RGB_Adj;
-		*b = RGB_max;
-		break;
-	case 4:
-		*r = RGB_min + RGB_Adj;
-		*g = RGB_min;
-		*b = RGB_max;
-		break;
-	default:		// case 5:
-		*r = RGB_max;
-		*g = RGB_min;
-		*b = RGB_max - RGB_Adj;
-		break;
-	}
+uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b) {
+	return 16*16*16*16*r + 16*16*g + b;
 }
