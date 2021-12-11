@@ -9,12 +9,13 @@
 #include <time.h>
 #include <unistd.h>
 
-#define W 3500.0
-#define H 2500.0
+#define W 4200.0
+#define H 3000.0
 
-#define MIDDLE_X -25
-#define MIDDLE_Y 24
-#define ZOOM 100000
+#define MIDDLE_X -27.3999432
+#define MIDDLE_Y 24.15027
+#define ZOOM 70
+#define ZOOM_SPEED 3
 
 // #define X_MAX -0.546
 // #define X_MIN -0.572
@@ -26,17 +27,20 @@
 #define Y_MAX 1.25
 #define Y_MIN -1.25
 
-#define N_MAX 1000
-#define THREADS 160
+#define N_MAX 10000
+#define THREADS 128
 
-double image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY);
-double math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY);
+// #define MIDDLE_X -27.399980999
+// #define MIDDLE_Y 24.1499999
+
+void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY);
+void math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY);
 long to_pos(long x, long y);
 
 long recursion(double complex c, double complex z, long tiefe);
 void calculate_set(uint32_t *data, long thread_nr, long threads);
 void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
-void calculate_image_position(long x_middle, long y_middle, long zoom);
+void calculate_image_position(double x_middle, double y_middle, double zoom);
 uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b);
 
 DWORD WINAPI calculate_segment(uint32_t* data);
@@ -46,7 +50,7 @@ double x_max, x_min, y_max, y_min;
 clock_t start, end;
 double cpu_time_used;
 
-long main(void) {
+int main(void) {
 	
 	if (H * W * 4 + 54 > 4000000000) {
 		printf("\nImage size too big!\n\n");
@@ -56,47 +60,55 @@ long main(void) {
 	
 	start = clock();
 	Beep(540,200);
-	
-	uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
-	
-	
-	calculate_image_position(MIDDLE_X, MIDDLE_Y, ZOOM);									// (-100 to 100, -100 to 100, zoom) 
-	printf("%f %f %f %f", x_max, x_min, y_max, y_min);
-	
-	printf("\nCalculating graph\n");
-	
-	DWORD   dwThreadIdArray[THREADS];
-	for (long i = 0; i < THREADS; i++) {
-		HANDLE thread = CreateThread(NULL, 0, calculate_segment, data, 0, NULL);
-	}
-	
-	long not_finished = THREADS;
-	long old_finished = 0;
-	while(not_finished) {
-		not_finished = THREADS;
+
+	for (int step = 23; step < 24; step++) {
+		memset(thread_table, 0, sizeof(thread_table));
+
+		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
 		
+		
+		calculate_image_position(MIDDLE_X, MIDDLE_Y, ZOOM + pow(ZOOM_SPEED, step));
+		
+		printf("\nCalculating graph\n");
+		
+		DWORD   dwThreadIdArray[THREADS];
 		for (long i = 0; i < THREADS; i++) {
-			if(*(thread_table + i) == 2) {
-				not_finished--;
+			HANDLE thread = CreateThread(NULL, 0, calculate_segment, data, 0, NULL);
+		}
+		
+		long not_finished = THREADS;
+		long old_finished = 0;
+		while(not_finished) {
+			not_finished = THREADS;
+			
+			for (long i = 0; i < THREADS; i++) {
+				if(*(thread_table + i) == 2) {
+					not_finished--;
+				}
 			}
-		}
-		if(not_finished != old_finished) {
-			printf("Threads finished: %d%%\n", (THREADS-not_finished)* 100/THREADS);
-			old_finished = not_finished;
-		}
-	}	
-	
-	printf("\nPainting graph\n");	
-	bmp_create("bild_MT.bmp", data, W, H);
-	printf("\nSuccess!\n");
-	
+			if(not_finished != old_finished) {
+				printf("Threads finished: %d%%\n", (THREADS-not_finished)* 100/THREADS);
+				old_finished = not_finished;
+			}
+		}	
+		
+		printf("\nPainting graph\n");
+		
+		char name[33];
+		sprintf(name, "third_iteration/mandel_%d.bmp", step);
+		
+		bmp_create(name, data,  W, H);
+
+		printf("\nSuccess!\n");
+		
+		free(data);
+	}
+
 	end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 	printf("Needed %f Seconds / %f Minutes / %f Hours\n\n", cpu_time_used, cpu_time_used / 60, cpu_time_used / 3600);
 	
 	Beep(540,200);
-	
-	free(data);
 	
 	return(0);
 }
@@ -115,7 +127,7 @@ DWORD WINAPI calculate_segment(uint32_t* data) {
 	*(thread_table + thread_nr) += 1; 		// marking as finished
 }
 
-void calculate_set(uint32_t *data, long thread_nr, long threads) { //thread_nr 0 ... n - 1, threads n
+void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 0 ... n - 1, threads n
 	double bX = 0.0;
 	double bY = 0.0;
 	double mX = 0.0;
@@ -157,35 +169,33 @@ long recursion(double complex c, double complex z, long tiefe) {
 void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
 	math_coordinates_to_image_cooridnates(bX, bY, mX, mY);
 	
-	uint32_t r, g, b, in;
-	in = map_value(log(tiefe), 0, log(N_MAX/2), 0, 359);
-	
-	HSV_to_RGB(&r, &g, &b, in, 100, 100);
+	uint32_t r, g, b, h_value, s_value, v_value;
+	h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
+	//h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
+	s_value = 100;
+	v_value = 100;
+
+	HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
 	
 	*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
 }
 
-double image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
+void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
 	*mX = x_min + ((*bX * (x_max - x_min)) / (W));
 	*mY = y_min + ((*bY * (y_max - y_min)) / (H));
-	
-	return(0);
 }
 
-double math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY) {
+void math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY) {
 	*mY = map_value(*mY, y_min, y_max, y_max, y_min); 
 	*bX = ((*mX - x_min) * (W)) / (x_max - x_min);
 	*bY = ((*mY - y_min) * (H-1)) / (y_max - y_min);
-	
-	return(0);
 }
 
 long to_pos(long x, long y) {
 	return((y * W) + x);
 }
 
-void calculate_image_position(long x_middle, long y_middle, long zoom) {
-	
+void calculate_image_position(double x_middle, double y_middle, double zoom) {
 	x_min = map_value(x_middle - 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
 	x_max = map_value(x_middle + 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
 	y_min = map_value(y_middle + 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
