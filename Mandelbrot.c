@@ -7,10 +7,10 @@
 #include <math.h>
 #include <complex.h>
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
 
-#define W 4200.0
-#define H 3000.0
+#define W 420.0
+#define H 300.0
 
 #define MIDDLE_X -27.3999432
 #define MIDDLE_Y 24.15027
@@ -28,7 +28,7 @@
 #define Y_MIN -1.25
 
 #define N_MAX 10000
-#define THREADS 128
+#define THREADS 48
 
 // #define MIDDLE_X -27.399980999
 // #define MIDDLE_Y 24.1499999
@@ -43,7 +43,7 @@ void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, 
 void calculate_image_position(double x_middle, double y_middle, double zoom);
 uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b);
 
-DWORD WINAPI calculate_segment(uint32_t* data);
+DWORD WINAPI calculate_segment(LPVOID lpParam);
 
 long thread_table[THREADS] = {0};
 double x_max, x_min, y_max, y_min;
@@ -95,7 +95,7 @@ int main(void) {
 		printf("\nPainting graph\n");
 		
 		char name[33];
-		sprintf(name, "third_iteration/mandel_%d.bmp", step);
+		sprintf(name, "images/mandel_%d.bmp", step);
 		
 		bmp_create(name, data,  W, H);
 
@@ -113,7 +113,9 @@ int main(void) {
 	return(0);
 }
 
-DWORD WINAPI calculate_segment(uint32_t* data) {
+DWORD WINAPI calculate_segment(LPVOID lpParam) {
+	uint32_t *data = (uint32_t*)lpParam;
+	
 	long thread_nr = 0;
 	for(long i = 0; i < THREADS; i++) {  	// Extremely intelligent method to assign the tread_nr
 		if(*(thread_table + i) == 0) {
