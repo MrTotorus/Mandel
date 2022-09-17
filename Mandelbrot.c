@@ -28,7 +28,7 @@
 #define Y_MIN -1.25
 
 #define N_MAX 10000
-#define THREADS 48
+#define THREADS 128
 
 // #define MIDDLE_X -27.399980999
 // #define MIDDLE_Y 24.1499999
@@ -61,7 +61,7 @@ int main(void) {
 	start = clock();
 	Beep(540,200);
 
-	for (int step = 23; step < 24; step++) {
+	for (int step = 18; step < 19; step++) {
 		memset(thread_table, 0, sizeof(thread_table));
 
 		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
@@ -76,12 +76,12 @@ int main(void) {
 			HANDLE thread = CreateThread(NULL, 0, calculate_segment, data, 0, NULL);
 		}
 		
-		long not_finished = THREADS;
-		long old_finished = 0;
+		int not_finished = THREADS;
+		int old_finished = 0;
 		while(not_finished) {
 			not_finished = THREADS;
 			
-			for (long i = 0; i < THREADS; i++) {
+			for (int i = 0; i < THREADS; i++) {
 				if(*(thread_table + i) == 2) {
 					not_finished--;
 				}
@@ -116,8 +116,8 @@ int main(void) {
 DWORD WINAPI calculate_segment(LPVOID lpParam) {
 	uint32_t *data = (uint32_t*)lpParam;
 	
-	long thread_nr = 0;
-	for(long i = 0; i < THREADS; i++) {  	// Extremely intelligent method to assign the tread_nr
+	int thread_nr = 0;
+	for(int i = 0; i < THREADS; i++) {  	// Extremely intelligent method to assign the tread_nr
 		if(*(thread_table + i) == 0) {
 			*(thread_table + i) += 1;
 			thread_nr = i;
@@ -140,7 +140,6 @@ void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 
 	
 	for (long xw = W / threads * thread_nr; xw < W / threads * (thread_nr  + 1); xw++) {	// Splitting the picture in |THREADS| columns
 		for (long yh = 0; yh <= H; yh++) {
-			
 			image_coordinates_to_math_coordinates(&xw, &yh, &mX, &mY);
 			
 			c = mX + I * mY;
@@ -148,13 +147,11 @@ void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 
 			tiefe = recursion(c, 0, 0);
 			
 			draw_color(data, tiefe, &bX, &bY, &mX, &mY);
-			
 		}
 	}
 }
 
 long recursion(double complex c, double complex z, long tiefe) {
-	
 	if (tiefe > N_MAX) {
 		return(tiefe - 1);
 	}
@@ -202,7 +199,6 @@ void calculate_image_position(double x_middle, double y_middle, double zoom) {
 	x_max = map_value(x_middle + 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
 	y_min = map_value(y_middle + 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
 	y_max = map_value(y_middle - 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
-	
 }
 
 uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b) {
