@@ -7,13 +7,14 @@
 #include <math.h>
 #include <complex.h>
 #include <time.h>
-//#include <unistd.h>
+#include <stdlib.h> 
 
-#define W 210.0
-#define H 150.0
+#define W 420.0
+#define H 300.0
 
-#define MIDDLE_X -27.39994323
-#define MIDDLE_Y 24.15026998
+#define MIDDLE_X -27.39995
+#define MIDDLE_Y 24.150268
+
 #define ZOOM 70
 #define ZOOM_SPEED 3
 
@@ -30,6 +31,8 @@
 #define N_MAX 10000
 #define THREADS 128
 
+// #define MIDDLE_X -27.39994323
+// #define MIDDLE_Y 24.15026998
 // #define MIDDLE_X -27.399980999
 // #define MIDDLE_Y 24.1499999
 // #define MIDDLE_X -27.3999432
@@ -62,8 +65,9 @@ int main(void) {
 	
 	start = clock();
 	Beep(540,200);
+	srand(time(NULL));
 
-	for (int step = 27; step < 28; step++) {
+	for (int step = 18; step < 19; step++) {
 		memset(thread_table, 0, sizeof(thread_table));
 
 		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
@@ -96,8 +100,14 @@ int main(void) {
 		
 		printf("\nPainting graph\n");
 		
-		char name[33];
-		sprintf(name, "images/mandel_%d.bmp", step);
+		char time_str[80];
+		char name[100];
+		time_t now = time(NULL);
+		struct tm *t = localtime(&now);
+
+		strftime(time_str, sizeof(time_str)-1, "%d%m%Y%H%M", t);
+		
+		sprintf(name, "images/mandel_%d_%s.bmp", step, time_str);
 		
 		bmp_create(name, data,  W, H);
 
@@ -173,12 +183,13 @@ void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, 
 	math_coordinates_to_image_cooridnates(bX, bY, mX, mY);
 	
 	uint32_t r, g, b, h_value, s_value, v_value;
-	h_value = map_value(tiefe%900, 0.0, 900, 0.0, 359.0); 
+	h_value = 195;//map_value(tiefe%900, 0, 900, 0.0, 359.0); 
 	//h_value = tiefe%359; 
 	//h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
 	//h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
-	s_value = 100;
-	v_value = 100;
+	s_value = map_value(tiefe%100, 0, 100, 0.0, 100.0); 
+	//s_value = 100;
+	v_value = map_value(tiefe%100, 0, 100, 0.0, 100.0);
 
 	HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
 	
