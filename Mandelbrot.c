@@ -9,11 +9,11 @@
 #include <time.h>
 //#include <unistd.h>
 
-#define W 420.0
-#define H 300.0
+#define W 210.0
+#define H 150.0
 
-#define MIDDLE_X -27.3999432
-#define MIDDLE_Y 24.15027
+#define MIDDLE_X -27.39994323
+#define MIDDLE_Y 24.15026998
 #define ZOOM 70
 #define ZOOM_SPEED 3
 
@@ -32,12 +32,14 @@
 
 // #define MIDDLE_X -27.399980999
 // #define MIDDLE_Y 24.1499999
+// #define MIDDLE_X -27.3999432
+// #define MIDDLE_Y 24.15027
 
 void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY);
 void math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY);
 long to_pos(long x, long y);
 
-long recursion(double complex c, double complex z, long tiefe);
+long recursion(double _Complex c, double _Complex z, long tiefe);
 void calculate_set(uint32_t *data, long thread_nr, long threads);
 void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
 void calculate_image_position(double x_middle, double y_middle, double zoom);
@@ -61,7 +63,7 @@ int main(void) {
 	start = clock();
 	Beep(540,200);
 
-	for (int step = 18; step < 19; step++) {
+	for (int step = 27; step < 28; step++) {
 		memset(thread_table, 0, sizeof(thread_table));
 
 		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
@@ -127,6 +129,8 @@ DWORD WINAPI calculate_segment(LPVOID lpParam) {
 	calculate_set(data, thread_nr, THREADS);
 	
 	*(thread_table + thread_nr) += 1; 		// marking as finished
+	
+	return(0);
 }
 
 void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 0 ... n - 1, threads n
@@ -136,7 +140,7 @@ void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 
 	double mY = 0.0;
 	
 	long tiefe = 0;
-	complex double c;
+	double _Complex c;
 	
 	for (long xw = W / threads * thread_nr; xw < W / threads * (thread_nr  + 1); xw++) {	// Splitting the picture in |THREADS| columns
 		for (long yh = 0; yh <= H; yh++) {
@@ -151,7 +155,7 @@ void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 
 	}
 }
 
-long recursion(double complex c, double complex z, long tiefe) {
+long recursion(double _Complex c, double _Complex z, long tiefe) {
 	if (tiefe > N_MAX) {
 		return(tiefe - 1);
 	}
@@ -169,7 +173,9 @@ void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, 
 	math_coordinates_to_image_cooridnates(bX, bY, mX, mY);
 	
 	uint32_t r, g, b, h_value, s_value, v_value;
-	h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
+	h_value = map_value(tiefe%900, 0.0, 900, 0.0, 359.0); 
+	//h_value = tiefe%359; 
+	//h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
 	//h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
 	s_value = 100;
 	v_value = 100;
