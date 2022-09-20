@@ -3,6 +3,13 @@
 #include "helperFunctions.h"
 
 #include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <limits.h>
+#include <string.h>
+#include <ftw.h>
 
 char dat_path[PATH_MAX];
 time_t mtime = 100000000;
