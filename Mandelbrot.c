@@ -78,9 +78,8 @@ int main(void) {
 		
 		printf("\nCalculating graph\n");
 		
-		DWORD   dwThreadIdArray[THREADS];
 		for (long i = 0; i < THREADS; i++) {
-			HANDLE thread = CreateThread(NULL, 0, calculate_segment, data, 0, NULL);
+			CreateThread(NULL, 0, calculate_segment, data, 0, NULL);
 		}
 		
 		int not_finished = THREADS;
