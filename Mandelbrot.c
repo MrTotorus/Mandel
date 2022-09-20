@@ -9,6 +9,7 @@
 #include <complex.h>
 #include <time.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #define THREADS 48
 
@@ -40,12 +41,12 @@ double x_max_base = 0;
 double x_min_base = 0;
 double y_max_base = 0;
 double y_min_base = 0;
-
+int save_to_image = 0;
 
 int main(void) {
     char *config= readFile("default.config"); // load configuration from default.config
-	width = find_double_parameter(config, "width");
-	height = width * 5/7;
+	width = floor(find_double_parameter(config, "width"));
+	height = floor(width * 5/7);
 	middle_x = find_double_parameter(config, "middle_x");
 	middle_y = find_double_parameter(config, "middle_y");
 	zoom_base = find_int_parameter(config, "zoom");
@@ -55,6 +56,7 @@ int main(void) {
 	x_min_base = find_double_parameter(config, "x_min");
 	y_max_base = find_double_parameter(config, "y_max");
 	y_min_base = find_double_parameter(config, "y_min");
+	save_to_image = find_int_parameter(config, "save_to_image");
 
 
 	if (width * height * 4 + 54 > 4000000000) {
@@ -71,7 +73,6 @@ int main(void) {
 		memset(thread_table, 0, sizeof(thread_table));
 
 		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * width * height); 	// Bilddaten
-		
 		
 		calculate_image_position(zoom_base + pow(zoom_speed, step));
 		
@@ -100,15 +101,27 @@ int main(void) {
 		
 		printf("\nPainting graph\n");
 		
-		char time_str[80];
-		char name[100];
+		char time_str[60];
+		char identifier[80];
+		char filename[100];
 		time_t now = time(NULL);
 		struct tm *t = localtime(&now);
 
 		strftime(time_str, sizeof(time_str)-1, "%d%m%Y%H%M", t);
-		sprintf(name, "images/mandel_%d_%s.bmp", step, time_str);
-		
-		bmp_create(name, data,  width, height);
+		sprintf(identifier, "mandel_%d_%s", step, time_str);
+
+		if (save_to_image) {
+			sprintf(filename, "images/%s.bmp", identifier);
+			bmp_create(filename, data,  width, height);
+		} else {
+			FILE *fp;
+			sprintf(filename, "data/%s.dat", identifier);
+   			fp = fopen(filename, "w");
+			for (int i = 0; i < width * height; i++) {
+   				fprintf(fp, "%"PRIu32" ", data[i]);
+			}
+   			fclose(fp);
+		}
 
 		printf("\nSuccess!\n");
 		
@@ -194,7 +207,7 @@ void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, 
 	//HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
 	
 	//*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
-	*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe*6;
+	*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe;//*6;
 }
 
 void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
