@@ -42,6 +42,8 @@ double x_min_base = 0;
 double y_max_base = 0;
 double y_min_base = 0;
 int save_to_image = 0;
+int zoom_start = 0;
+int zoom_end = 0;
 
 int main(void) {
     char *config= readFile("default.config"); // load configuration from default.config
@@ -57,6 +59,8 @@ int main(void) {
 	y_max_base = find_double_parameter(config, "y_max");
 	y_min_base = find_double_parameter(config, "y_min");
 	save_to_image = find_int_parameter(config, "save_to_image");
+	zoom_start = find_int_parameter(config, "start");
+	zoom_end = find_int_parameter(config, "end");
 
 
 	if (width * height * 4 + 54 > 4000000000) {
@@ -69,7 +73,7 @@ int main(void) {
 	Beep(540,200);
 	srand(time(NULL));
 
-	for (int step = 10; step < 11; step++) {
+	for (int step = zoom_start; step <= zoom_end; step++) {
 		memset(thread_table, 0, sizeof(thread_table));
 
 		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * width * height); 	// Bilddaten
