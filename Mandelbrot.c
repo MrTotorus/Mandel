@@ -45,7 +45,7 @@ double y_min_base = 0;
 int main(void) {
     char *config= readFile("default.config"); // load configuration from default.config
 	width = find_double_parameter(config, "width");
-	height = find_double_parameter(config, "height");
+	height = width * 5/7;
 	middle_x = find_double_parameter(config, "middle_x");
 	middle_y = find_double_parameter(config, "middle_y");
 	zoom_base = find_int_parameter(config, "zoom");
@@ -194,7 +194,7 @@ void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, 
 	//HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
 	
 	//*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
-	*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe*6; 
+	*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe*6;
 }
 
 void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
