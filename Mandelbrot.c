@@ -69,7 +69,7 @@ int main(void) {
 	Beep(540,200);
 	srand(time(NULL));
 
-	for (int step = 0; step < 1; step++) {
+	for (int step = 10; step < 11; step++) {
 		memset(thread_table, 0, sizeof(thread_table));
 
 		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * width * height); 	// Bilddaten
@@ -99,8 +99,6 @@ int main(void) {
 			}
 		}	
 		
-		printf("\nPainting graph\n");
-		
 		char time_str[60];
 		char identifier[80];
 		char filename[100];
@@ -111,14 +109,16 @@ int main(void) {
 		sprintf(identifier, "mandel_%d_%s", step, time_str);
 
 		if (save_to_image) {
+			printf("\nPainting graph\n");
 			sprintf(filename, "images/%s.bmp", identifier);
 			bmp_create(filename, data,  width, height);
 		} else {
+			printf("\nSaving data\n");
 			FILE *fp;
 			sprintf(filename, "data/%s.dat", identifier);
    			fp = fopen(filename, "w");
 			for (int i = 0; i < width * height; i++) {
-   				fprintf(fp, "%"PRIu32" ", data[i]);
+   				fprintf(fp, "%"PRIu32"\n", data[i]);
 			}
    			fclose(fp);
 		}
@@ -194,20 +194,23 @@ long recursion(double _Complex c, double _Complex z, long tiefe) {
 
 void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
 	math_coordinates_to_image_cooridnates(bX, bY, mX, mY);
-	
-	//uint32_t r, g, b, h_value, s_value, v_value;
-	//h_value = map_value(tiefe%9, 0, 9, 0.0, 359.0); 
-	////h_value = tiefe%359; 
-	////h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
-	////h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
-	//s_value = map_value(tiefe%100, 0, 100, 0.0, 100.0); 
-	////s_value = 100;
-	//v_value = map_value(tiefe%100, 0, 100, 0.0, 100.0);
 
-	//HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
+	if (save_to_image) {	
+		uint32_t r, g, b, h_value, s_value, v_value;
+		h_value = map_value(tiefe%30, 0, 30, 0.0, 359.0); 
+		//h_value = tiefe%359; 
+		//h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
+		//h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
+		//s_value = map_value(tiefe%100, 0, 100, 0.0, 100.0); 
+		s_value = 100;
+		v_value = 100;//map_value(tiefe%100, 0, 100, 0.0, 100.0);
+
+		HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
 	
-	//*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
-	*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe;//*6;
+		*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
+	} else {
+		*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe;
+	}
 }
 
 void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
@@ -230,8 +233,4 @@ void calculate_image_position(double zoom) {
 	x_max = map_value(middle_x + 10000.0/zoom, -100.0, 100.0, x_min_base, x_max_base);
 	y_min = map_value(middle_y + 10000.0/zoom, -100.0, 100.0, y_min_base, y_max_base);
 	y_max = map_value(middle_y - 10000.0/zoom, -100.0, 100.0, y_min_base, y_max_base);
-}
-
-uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b) {
-	return 16*16*16*16*r + 16*16*g + b;
 }
