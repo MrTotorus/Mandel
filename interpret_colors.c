@@ -4,18 +4,39 @@
 
 #include <math.h>
 
+char dat_path[PATH_MAX];
+time_t mtime = 100000000;
+
+int checkifnewer(const char *path, const struct stat *sb, int typeflag) {
+    if (typeflag == FTW_F && sb->st_mtime > mtime) {
+        mtime = sb->st_mtime;
+        strncpy(dat_path, path, PATH_MAX);
+    }
+    return 0;
+}
+
 int main(void) {
     double image_width = 0;
     double image_height = 0;
     long maximal_recursions = 0;
     long minimal_recursions = 10000;
     char file_name[80];
-    char dat_path[100];
     char bmp_path[100];
     char buffer[30];
+    char *end;
    
-    printf("Please enter datafile you want to transform into an image (without extension)\n");
+    printf("Please enter datafile you want to transform into an image (without extension) or 'latest' / 'l'\n");
     scanf("%s", file_name);
+
+    if (strcmp(file_name, "latest") && strcmp(file_name, "l")) {
+        sprintf(dat_path, "data/%s.dat", file_name);
+    } else {
+        ftw("data", checkifnewer, 1);
+        end = strstr(dat_path, ".");
+        *end = '\0';
+        strcpy(file_name, strstr(dat_path, "/")+1); 
+        *end = '.';
+    }
 
     printf("Please enter the width of the image\n");
     scanf("%lf", &image_width);
@@ -26,7 +47,6 @@ int main(void) {
     long tiefe;
 
     FILE *file;
-    sprintf(dat_path, "data/%s.dat", file_name);
     file = fopen(dat_path, "r");
     for (long i = 0; i < (int) (image_width * image_height); i++) {
         fgets(buffer,30,file);
