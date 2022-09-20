@@ -30,12 +30,23 @@ char *readFile(char *fileName) { // read file to char*
     return content;
 }
 
-double find_parameter(char*config, char* parameter) { // find parameter and return value enclosed by "
+double find_double_parameter(char*config, char* parameter) { // find parameter and return value enclosed by "
     char* parameter_start = strstr(config, parameter);
     char* start = strchr(parameter_start, '"') + 1;
     char* end = strchr(start, '"');
     *end = '\0';
-    return(atof(start));
+    double value = atof(start);
+    *end = '"';
+    return(value);
 }
 
+int find_int_parameter(char*config, char* parameter) { // find parameter and return value enclosed by "
+    char* parameter_start = strstr(config, parameter);
+    char* start = strchr(parameter_start, '"') + 1;
+    char* end = strchr(start, '"');
+    *end = '\0';
+    int value = atoi(start);
+    *end = '"';
+    return(value);
+}
 #endif
