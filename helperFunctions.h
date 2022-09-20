@@ -56,5 +56,8 @@ double map_value(double x, double in_min, double in_max, double out_min, double 
 	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;					// Map an input to a specific range
 }
 
+uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b) {
+	return 16*16*16*16*r + 16*16*g + b;
+}
 
 #endif
