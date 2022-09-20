@@ -1,5 +1,6 @@
 #include "libBMP.h"
 #include "helperFunctions.h"
+#include "readfile.h"
 
 #include <stdio.h>
 #include <windows.h>
@@ -7,36 +8,9 @@
 #include <math.h>
 #include <complex.h>
 #include <time.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 
-#define W 420.0
-#define H 300.0
-
-#define MIDDLE_X -27.39995
-#define MIDDLE_Y 24.150268
-
-#define ZOOM 70
-#define ZOOM_SPEED 3
-
-// #define X_MAX -0.546
-// #define X_MIN -0.572
-// #define Y_MAX -0.55
-// #define Y_MIN -0.565
-
-#define X_MAX 1.25
-#define X_MIN -2.25
-#define Y_MAX 1.25
-#define Y_MIN -1.25
-
-#define N_MAX 10000
-#define THREADS 128
-
-// #define MIDDLE_X -27.39994323
-// #define MIDDLE_Y 24.15026998
-// #define MIDDLE_X -27.399980999
-// #define MIDDLE_Y 24.1499999
-// #define MIDDLE_X -27.3999432
-// #define MIDDLE_Y 24.15027
+#define THREADS 48
 
 void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY);
 void math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY);
@@ -45,7 +19,7 @@ long to_pos(long x, long y);
 long recursion(double _Complex c, double _Complex z, long tiefe);
 void calculate_set(uint32_t *data, long thread_nr, long threads);
 void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY);
-void calculate_image_position(double x_middle, double y_middle, double zoom);
+void calculate_image_position(double zoom);
 uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b);
 
 DWORD WINAPI calculate_segment(LPVOID lpParam);
@@ -55,9 +29,35 @@ double x_max, x_min, y_max, y_min;
 clock_t start, end;
 double cpu_time_used;
 
+double width = 0;
+double height = 0;
+double middle_x = 0;
+double middle_y = 0;
+int zoom_base = 0;
+int zoom_speed = 0;
+int max_iterations = 0;
+double x_max_base = 0;
+double x_min_base = 0;
+double y_max_base = 0;
+double y_min_base = 0;
+
+
 int main(void) {
-	
-	if (H * W * 4 + 54 > 4000000000) {
+    char *config= readFile("default.config"); // load configuration from default.config
+	width = find_double_parameter(config, "width");
+	height = find_double_parameter(config, "height");
+	middle_x = find_double_parameter(config, "middle_x");
+	middle_y = find_double_parameter(config, "middle_y");
+	zoom_base = find_int_parameter(config, "zoom");
+	zoom_speed = find_int_parameter(config, "zoom_speed");
+	max_iterations = find_int_parameter(config, "max_iterations");
+	x_max_base = find_double_parameter(config, "x_max");
+	x_min_base = find_double_parameter(config, "x_min");
+	y_max_base = find_double_parameter(config, "y_max");
+	y_min_base = find_double_parameter(config, "y_min");
+
+
+	if (width * height * 4 + 54 > 4000000000) {
 		printf("\nImage size too big!\n\n");
 		Beep(880,200);
 		exit(-1);
@@ -67,13 +67,13 @@ int main(void) {
 	Beep(540,200);
 	srand(time(NULL));
 
-	for (int step = 18; step < 19; step++) {
+	for (int step = 0; step < 1; step++) {
 		memset(thread_table, 0, sizeof(thread_table));
 
-		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * W * H); 	// Bilddaten
+		uint32_t *data = (uint32_t*) malloc(sizeof(uint32_t) * width * height); 	// Bilddaten
 		
 		
-		calculate_image_position(MIDDLE_X, MIDDLE_Y, ZOOM + pow(ZOOM_SPEED, step));
+		calculate_image_position(zoom_base + pow(zoom_speed, step));
 		
 		printf("\nCalculating graph\n");
 		
@@ -106,10 +106,9 @@ int main(void) {
 		struct tm *t = localtime(&now);
 
 		strftime(time_str, sizeof(time_str)-1, "%d%m%Y%H%M", t);
-		
 		sprintf(name, "images/mandel_%d_%s.bmp", step, time_str);
 		
-		bmp_create(name, data,  W, H);
+		bmp_create(name, data,  width, height);
 
 		printf("\nSuccess!\n");
 		
@@ -151,22 +150,23 @@ void calculate_set(uint32_t *data, long thread_nr, long threads) { // thread_nr 
 	
 	long tiefe = 0;
 	double _Complex c;
+
 	
-	for (long xw = W / threads * thread_nr; xw < W / threads * (thread_nr  + 1); xw++) {	// Splitting the picture in |THREADS| columns
-		for (long yh = 0; yh <= H; yh++) {
+	for (long xw = width / threads * thread_nr; xw < width / threads * (thread_nr  + 1); xw++) {	// Splitting the picture in |THREADS| columns
+		for (long yh = 0; yh <= height; yh++) {
 			image_coordinates_to_math_coordinates(&xw, &yh, &mX, &mY);
 			
-			c = mX + I * mY;
+			c = mX + I * mY;			
 			
 			tiefe = recursion(c, 0, 0);
-			
+
 			draw_color(data, tiefe, &bX, &bY, &mX, &mY);
 		}
 	}
 }
 
 long recursion(double _Complex c, double _Complex z, long tiefe) {
-	if (tiefe > N_MAX) {
+	if (tiefe > max_iterations) {
 		return(tiefe - 1);
 	}
 	if (cabs(z) >= 2.0) {
@@ -182,40 +182,41 @@ long recursion(double _Complex c, double _Complex z, long tiefe) {
 void draw_color(uint32_t *data, long tiefe, double *bX, double *bY, double *mX, double *mY) {	// Write pixel_data to data
 	math_coordinates_to_image_cooridnates(bX, bY, mX, mY);
 	
-	uint32_t r, g, b, h_value, s_value, v_value;
-	h_value = 195;//map_value(tiefe%900, 0, 900, 0.0, 359.0); 
-	//h_value = tiefe%359; 
-	//h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
-	//h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
-	s_value = map_value(tiefe%100, 0, 100, 0.0, 100.0); 
-	//s_value = 100;
-	v_value = map_value(tiefe%100, 0, 100, 0.0, 100.0);
+	//uint32_t r, g, b, h_value, s_value, v_value;
+	//h_value = map_value(tiefe%9, 0, 9, 0.0, 359.0); 
+	////h_value = tiefe%359; 
+	////h_value = map_value(pow(log(tiefe),3), 0, pow(log(N_MAX),3), 0.0, 359.0);
+	////h_value = map_value(tiefe, 0.0, N_MAX/tiefe, 0.0, 359.0);
+	//s_value = map_value(tiefe%100, 0, 100, 0.0, 100.0); 
+	////s_value = 100;
+	//v_value = map_value(tiefe%100, 0, 100, 0.0, 100.0);
 
-	HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
+	//HSV_to_RGB(&r, &g, &b, h_value, s_value, v_value);
 	
-	*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
+	//*(data + to_pos((long)round(*bX), (long)round(*bY))) = combine_color(r, g, b);
+	*(data + to_pos((long)round(*bX), (long)round(*bY))) = tiefe*6; 
 }
 
 void image_coordinates_to_math_coordinates(long *bX, long *bY, double *mX, double *mY) {
-	*mX = x_min + ((*bX * (x_max - x_min)) / (W));
-	*mY = y_min + ((*bY * (y_max - y_min)) / (H));
+	*mX = x_min + ((*bX * (x_max - x_min)) / (width));
+	*mY = y_min + ((*bY * (y_max - y_min)) / (height));
 }
 
 void math_coordinates_to_image_cooridnates(double *bX, double *bY, double *mX, double *mY) {
 	*mY = map_value(*mY, y_min, y_max, y_max, y_min); 
-	*bX = ((*mX - x_min) * (W)) / (x_max - x_min);
-	*bY = ((*mY - y_min) * (H-1)) / (y_max - y_min);
+	*bX = ((*mX - x_min) * (width)) / (x_max - x_min);
+	*bY = ((*mY - y_min) * (height-1)) / (y_max - y_min);
 }
 
 long to_pos(long x, long y) {
-	return((y * W) + x);
+	return((y * width) + x);
 }
 
-void calculate_image_position(double x_middle, double y_middle, double zoom) {
-	x_min = map_value(x_middle - 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
-	x_max = map_value(x_middle + 10000.0/zoom, -100.0, 100.0, X_MIN, X_MAX);
-	y_min = map_value(y_middle + 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
-	y_max = map_value(y_middle - 10000.0/zoom, -100.0, 100.0, Y_MIN, Y_MAX);
+void calculate_image_position(double zoom) {
+	x_min = map_value(middle_x - 10000.0/zoom, -100.0, 100.0, x_min_base, x_max_base);
+	x_max = map_value(middle_x + 10000.0/zoom, -100.0, 100.0, x_min_base, x_max_base);
+	y_min = map_value(middle_y + 10000.0/zoom, -100.0, 100.0, y_min_base, y_max_base);
+	y_max = map_value(middle_y - 10000.0/zoom, -100.0, 100.0, y_min_base, y_max_base);
 }
 
 uint32_t combine_color(uint32_t r, uint32_t g, uint32_t b) {
